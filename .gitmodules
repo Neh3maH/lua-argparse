@@ -1,0 +1,3 @@
+[submodule "libs/lua_utils"]
+	path = libs/lua_utils
+	url = git@github.com:Neh3maH/lua_utils.git
