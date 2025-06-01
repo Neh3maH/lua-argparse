@@ -1,4 +1,4 @@
-local lua_utils = require 'lua_utils'
+local lua_utils = require 'utils'
 local utils = lua_utils.misc
 local collections = lua_utils.collections
 

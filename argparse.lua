@@ -1,5 +1,7 @@
 local module = {}
 
+local utils = require './libs/utils/utils'('./libs/utils/')
+
 local old_path = package.path
 package.path = './src/?.lua;./libs/?/?.lua'
 

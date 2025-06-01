@@ -1,5 +1,6 @@
-local utils = require 'lua.utils.misc'
-local collections = require 'lua.utils.collections'
+local lua_utils = require 'utils'
+local utils = lua_utils.misc 
+local collections = lua_utils.collections 
 
 local Option = { k = nil, opt_k = {}, opt_v = nil, validators = {}, default = nil }
 
