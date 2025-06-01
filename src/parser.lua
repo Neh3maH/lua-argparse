@@ -1,4 +1,4 @@
-local parser = require 'lua.argparse.cmd_parser'
+local parser = require 'cmd_parser'
 
 local module = { subcmds = {}, _parser = nil}
 

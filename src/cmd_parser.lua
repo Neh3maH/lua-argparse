@@ -1,5 +1,6 @@
-local utils = require 'lua.utils.misc'
-local collections = require 'lua.utils.collections'
+local lua_utils = require 'lua_utils'
+local utils = lua_utils.misc
+local collections = lua_utils.collections
 
 local CmdParser = { options = {}, default_acc = {}, validators = {} }
 
