@@ -1,30 +1,33 @@
-local parser = require 'cmd_parser'
+local collections = require 'utils/collections'
+local parser = require 'argparse/cmd_parser'
 
 local module = { subcmds = {}, _parser = nil}
 
-function module:new(subcmds)
-	local new = { subcmds = subcmds or {} }
+function module:new(subcmds, parser)
+	local new = { subcmds = subcmds or {}, _parser = parser }
 	setmetatable(new, self)
 	self.__index = self
+	return new
 end
 
 function module:add(path, parser)
-	local cur = self.subcmds
+	local cur = self
 
-	while path do
+	while path and path ~= nil and cur do
 		local sep = string.find(path, '.')
 		local name = string.sub(1, sep or #path)
 		path = sep and string.sub(sep + 1, #path)
 
-		if cur[name] then
-			cur = cur[name]
+		if cur.subcmds[name] then
+			cur = cur.subcmds[name]
 		else
 			local new = self:new()
-			cur[name] = new
+			cur.subcmds[name] = new
 			cur = new
 		end
 	end
 	cur._parser = parser
+	return self
 end
 
 function module:parse(input)
@@ -32,8 +35,8 @@ function module:parse(input)
 	local path = nil
 	local cur = self
 
-	while #input ~= 0 and not string.starts(input[#input], '-')
-		and cur ~= nil and #cur.subcmds ~= 0 do
+	while #input ~= 0 and string.sub(input[#input], 1, 1) ~= '-'
+		and cur.subcmds ~= nil and #cur.subcmds ~= 0 do
 		cur = cur.subcmds[input[#input]]
 		if cur then
 			path = (path or "") .. "." .. cur

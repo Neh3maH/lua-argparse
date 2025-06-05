@@ -2,10 +2,10 @@ local lua_utils = require 'utils'
 local utils = lua_utils.misc
 local collections = lua_utils.collections
 
-local CmdParser = { options = {}, default_acc = {}, validators = {} }
+local CmdParser = { options = {}, pos_params = {}, default_acc = {}, validators = {} }
 
-function CmdParser:new(optl, acc, val)
-	local new = { options = optl, default_acc = acc, validators = val or {} }
+function CmdParser:new(optl, pos_params, acc, val)
+	local new = { options = optl, pos_params = pos_params, default_acc = acc, validators = val or {} }
 	setmetatable(new, self)
 	self.__index = self
 	return new
@@ -31,32 +31,36 @@ function CmdParser:remove(k)
 	return self, opt
 end
 
+local function match_opts(options, input, acc)
+	for _, opt in pairs(options) do
+		local match = opt:match(input, acc)
+
+		if true == match then
+			return true
+		end
+	end
+	return false
+end
+
 local function parse_opts(options, input, acc)
 	if #options == 0 then
-		if input[1] == '--' then
+		if input[#input] == '--' then
 			collections.pop(input)
 		end
-		input = collections.rev(input)
-		return input
+		return true
 	end
 
 	while #input ~= 0 and string.sub(input[#input], 1, 1) == '-' do
 		if input[#input] == '--' then
 			input[#input] = nil
-			return collections.rev(input)
+			return true
 		end
 
-		for _, opt in pairs(options) do
-			local match = opt:match(input, acc)
-
-			if true == match then
-				return collections.rev(input)
-			elseif nil == match then
-				return nil
-			end
+		if not match_opts(options, input, acc) then
+			return false
 		end
 	end
-	return collections.rev(input)
+	return true
 end
 
 local function init_acc(default, options)
@@ -71,18 +75,24 @@ end
 
 function CmdParser:parse(input)
 	local acc = init_acc(self.default_acc, self.options)
-	local params = parse_opts(self.options, input, acc)
+	
+	if not parse_opts(self.options, input, acc) then
+		return nil
+	end
 
+	if not parse_opts(self.pos_params, input, acc) then
+		return nil
+	end
+
+	local params = collections.rev(input)
 	local f = function(v) return v.param(params) end
 	if nil == params
 		or collections.ifind(self.validators, f) then
-		print("AAAAAAAAAAAAAA")
 		return nil
 	end
 
 	for _, opt in pairs(self.options) do
 		if opt:validate(acc) then
-			print("BBBBBBBBBB")
 			return nil
 		end
 	end

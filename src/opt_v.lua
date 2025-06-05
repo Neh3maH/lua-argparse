@@ -1,28 +1,35 @@
+local types = require 'utils/types'
+local collections = require 'utils/collections'
 local opt_v = {}
 
-local function once(k, setter)
-	local function inner(acc, tok)
-		if acc[k] ~= nil then
+local function _once(setter)
+	local function inner(k)
+		return function(acc, tok, input)
+			local v = setter(tok)
+			if (not types.is.ref(v) and acc[k] == v) or acc[k] ~= nil or v == nil then
+				return nil
+			end
+			acc[k] = v
 			return true
 		end
-		local v = setter(tok)
-		acc[k] = v
-		return v == nil
 	end
 	return inner
 end
 
 function opt_v.once(setter)
-	return function(k) return once(k, setter) end
+	return _once(k, setter)
 end
 
-local function flag(k, set)
+local function flag(set)
 	local f = function() return set end
-	return opt_v.once(k, f)
+	return _once(f)
 end
 
 function opt_v.flag(set)
-	return function(k) return flag(k, set) end
+	if nil == set then
+		set = true
+	end
+	return flag(set)
 end
 
 function opt_v.str(k)
@@ -33,50 +40,69 @@ function opt_v.str(k)
 		end
 		return tostring(tok)
 	end
-	return opt_v.once(k, inner)
+	return _once(inner)
 end
 
 function opt_v.int(k)
-	local f = function(tok) return tonumber(tok) end
-	return opt_v.once(k, f)
+	local f = function(tok)
+		tok = tok or collections.pop(input) or nil
+		return tok or tonumber(tok)
+	end
+	return _once(f)
+end
+
+function opt_v.fold(merge, conv, zero)
+	local function inner(k)
+		return function(acc, tok, input)
+			tok = conv(tok, input)
+			if tok == nil then
+				return nil
+			end
+
+			local l = acc[k]
+			if l == nil then
+				l = zero()
+			end
+
+			acc[k] = merge(l, tok)
+			return acc[k] ~= nil or nil
+		end
+	end
+	return inner
 end
 
 function opt_v.count(k)
-	local function inner(acc, tok)
-		if tok ~= nil then
-			return nil
-		end
-
-		acc[k] = (acc[k] or 0) + 1
-
-		return true
-	end
-	return inner
+	return opt_v.fold(
+		function(l, r) return l + r end,
+		function(tok)
+			if tok ~= nil then
+				return nil
+			end
+			return 1
+		end,
+		function() return 0 end
+	)
 end
 
 function opt_v.add(k)
-	local function inner(acc, tok, input)
-		tok = tonumber(tok or collections.pop(input))
-		if tok then
-			acc[k] = (acc[k] or 0) + tok
-			return true
-		end
-
-		return nil
-	end
-	return inner
+	return opt_v.fold(
+		function(l, r) return l + r end,
+		function(tok, input)
+			return tonumber(tok or collections.pop(input))
+		end,
+		function() return 0 end
+	)
 end
 
 function opt_v.lst(k)
-	local function inner(acc, tok, input)
-		local lst = acc[k] or {}
-		tok = tok or collections.pop(input)
-		if tok == nil then
-			return nil
-		end
-		lst[#lst] = tok
-		return true
-	end
+	return opt_v.fold(
+		function(l, r)
+			l[#l + 1] = r
+			return l
+		end,
+		function(tok, input) return tok or collections.pop(input) end,
+		function() return {} end
+	)
 end
 
 return opt_v
